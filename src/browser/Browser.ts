@@ -31,6 +31,7 @@ class Browser {
             ...(proxy.url && { proxy: { username: proxy.username, password: proxy.password, server: `${proxy.url}:${proxy.port}` } }),
             args: [
                 '--no-sandbox',
+                '--no-proxy-server',
                 '--mute-audio',
                 '--disable-setuid-sandbox',
                 '--ignore-certificate-errors',
