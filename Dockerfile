@@ -35,13 +35,11 @@ COPY src/crontab.template /etc/cron.d/microsoft-rewards-cron.template
 # Create the log file to be able to run tail
 RUN touch /var/log/cron.log
 
-# Define the command to run your application with cron optionally
-CMD ["sh", "-c", "echo \"$TZ\" > /etc/timezone && \
-    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
-    dpkg-reconfigure -f noninteractive tzdata && \
-    envsubst < /etc/cron.d/microsoft-rewards-cron.template > /etc/cron.d/microsoft-rewards-cron && \
-    chmod 0644 /etc/cron.d/microsoft-rewards-cron && \
-    crontab /etc/cron.d/microsoft-rewards-cron && \
-    cron -f & \
-    ([ \"$RUN_ON_START\" = \"true\" ] && npm start) && \
-    tail -f /var/log/cron.log"]
+# Copy the entrypoint script into the image
+COPY entrypoint.sh /usr/local/bin/
+
+# Make the entrypoint script executable
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Set the entrypoint script as the container's main command
+ENTRYPOINT ["entrypoint.sh"]
