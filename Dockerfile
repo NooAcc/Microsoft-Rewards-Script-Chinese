@@ -1,6 +1,11 @@
 # Use an official Node.js runtime as a base image
 FROM node:22
 
+#自动填入环境变量
+ENV CRON_SCHEDULE="30 8 * * *" \
+    RUN_ON_START="false" \
+    TZ="Asia/Shanghai"
+
 # Set the working directory in the container
 WORKDIR /usr/src/microsoft-rewards-script
 
@@ -41,5 +46,7 @@ COPY entrypoint.sh /usr/local/bin/
 # Make the entrypoint script executable
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
+ENTRYPOINT [""]
+
 # Set the entrypoint script as the container's main command
-ENTRYPOINT ["entrypoint.sh"]
+CMD ["entrypoint.sh"]
