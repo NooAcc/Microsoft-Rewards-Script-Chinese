@@ -1,7 +1,7 @@
 ###############################################################################
 # Stage 1: Builder (compile TypeScript)
 ###############################################################################
-FROM node:18-slim AS builder
+FROM node:22 AS builder
 
 WORKDIR /usr/src/microsoft-rewards-script
 
@@ -61,7 +61,7 @@ COPY --chmod=644 src/crontab.template /etc/cron.d/microsoft-rewards-cron.templat
 COPY --chmod=755 entrypoint.sh /usr/local/bin/entrypoint.sh
 
 # Default TZ (overridden by user via environment)
-ENV TZ=UTC
+ENV TZ=Asia/Shanghai
 
 # Entrypoint handles TZ, initial run toggle, cron templating & launch
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
