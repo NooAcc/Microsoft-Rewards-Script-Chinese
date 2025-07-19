@@ -1,34 +1,50 @@
-#!/bin/sh
-set -e
+#!/usr/bin/env bash
+set -euo pipefail
 
-# --- 1. 设置时区 ---
-echo "Setting timezone to ${TZ}..."
-echo "${TZ}" > /etc/timezone
-ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime
+# Ensure Playwright uses preinstalled browsers
+export PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+# 1. Timezone: default to UTC if not provided
+: "${TZ:=UTC}"
+ln -snf "/usr/share/zoneinfo/$TZ" /etc/localtime
+echo "$TZ" > /etc/timezone
 dpkg-reconfigure -f noninteractive tzdata
 
-# --- 2. 动态生成并加载 Cron 任务 ---
-echo "Generating cron configuration..."
-# 使用 envsubst 将模板中的环境变量替换为实际值
-envsubst < /etc/cron.d/microsoft-rewards-cron.template > /etc/cron.d/microsoft-rewards-cron
-# 设置正确的权限
-chmod 0644 /etc/cron.d/microsoft-rewards-cron
-# 让 cron 加载新的配置（在某些系统中需要）
-crontab /etc/cron.d/microsoft-rewards-cron
-
-# --- 3. 启动 Cron 服务 ---
-echo "Starting cron daemon in the background..."
-# -f 表示在前台运行，& 表示让它在 shell 的后台运行
-cron -f &
-
-# --- 4. 可选：在启动时立即运行一次任务 ---
-if [ "$RUN_ON_START" = "true" ]; then
-  echo "RUN_ON_START is true, executing 'npm start' now..."
-  # 直接执行 npm start，日志会输出到标准输出
-  npm start
+# 2. Validate CRON_SCHEDULE
+if [ -z "${CRON_SCHEDULE:-}" ]; then
+  echo "ERROR: CRON_SCHEDULE environment variable is not set." >&2
+  echo "Please set CRON_SCHEDULE (e.g., \"0 2 * * *\")." >&2
+  exit 1
 fi
 
-# --- 5. 保持容器运行并输出日志 ---
-# 这是脚本的主进程，它会保持在前台运行
-echo "Tailing cron log file to keep container alive and show logs..."
-tail -f /var/log/cron.log
+# 3. Initial run without sleep if RUN_ON_START=true
+if [ "${RUN_ON_START:-false}" = "true" ]; then
+  echo "[entrypoint] Starting initial run in background at $(date)"
+  (
+    cd /usr/src/microsoft-rewards-script || {
+      echo "[entrypoint-bg] ERROR: Unable to cd to /usr/src/microsoft-rewards-script" >&2
+      exit 1
+    }
+    # Skip random sleep for initial run, but preserve setting for cron jobs
+    SKIP_RANDOM_SLEEP=true src/run_daily.sh
+    echo "[entrypoint-bg] Initial run completed at $(date)"
+  ) &
+  echo "[entrypoint] Background process started (PID: $!)"
+fi
+
+# 4. Template and register cron file with explicit timezone export
+if [ ! -f /etc/cron.d/microsoft-rewards-cron.template ]; then
+  echo "ERROR: Cron template /etc/cron.d/microsoft-rewards-cron.template not found." >&2
+  exit 1
+fi
+
+# Export TZ for envsubst to use
+export TZ
+envsubst < /etc/cron.d/microsoft-rewards-cron.template > /etc/cron.d/microsoft-rewards-cron
+chmod 0644 /etc/cron.d/microsoft-rewards-cron
+crontab /etc/cron.d/microsoft-rewards-cron
+
+echo "[entrypoint] Cron configured with schedule: $CRON_SCHEDULE and timezone: $TZ; starting cron at $(date)"
+
+# 5. Start cron in foreground (PID 1)
+exec cron -f
