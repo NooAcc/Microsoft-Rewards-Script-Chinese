@@ -41,6 +41,7 @@ class Browser {
                 headless: this.bot.config.headless,
                 ...(proxy.url && { proxy: { username: proxy.username, password: proxy.password, server: `${proxy.url}:${proxy.port}` } }),
                 args: [
+                    '--no-proxy-server',
                     '--no-sandbox',
                     '--mute-audio',
                     '--disable-setuid-sandbox',
