@@ -55,7 +55,7 @@ export async function getUserAgent(isMobile: boolean) {
 export async function getChromeVersion(isMobile: boolean): Promise<string> {
     try {
         const request = {
-            url: 'https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions.json',
+            url: 'https://gh-proxy.org/https://github.com/GoogleChromeLabs/chrome-for-testing/blob/main/data/last-known-good-versions.json',
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
